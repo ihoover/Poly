@@ -1,4 +1,5 @@
 Polys
+> eval
 > pretty printing
 > adaptive variable names
 > environment globals of those names

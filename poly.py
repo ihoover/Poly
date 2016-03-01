@@ -1,7 +1,4 @@
-from itertools import product
 from functools import reduce
-from collections import Counter
-from copy import copy
 import math
 
 def gcd_2(m,n):
@@ -25,7 +22,6 @@ def tupToDict(tup):
         return tuple(base)
     
     return {basis(i):tup[i] for i in range(len(tup))}
-
 
 def allSwapsInnerFoil(n_vars, modP):
     """
@@ -209,7 +205,14 @@ class Poly(metaclass=RingElement):
             terms = Poly._zero_terms
         else:
             terms = args[0]
-
+        
+        if isinstance(terms, Poly):
+            return terms
+        
+        # assume (it acts like) a number if not a dict (catch None)
+        if not(isinstance(terms, dict)) and not(terms is None):
+            terms = {(0,):terms}
+        
         if (not terms) or (all(terms[key] == 0 for key in terms)):
             terms = Poly._zero_terms
 
@@ -227,11 +230,9 @@ class Poly(metaclass=RingElement):
             return Poly._instances[fterms]
         
         new = super().__new__(cls)
-        new.__init__(fterms)
+        new.__init__(fterms, **kwargs)
         Poly._instances[fterms] = new
         return new
-    
-    
     
     def __init__(self, terms):
         
@@ -240,11 +241,14 @@ class Poly(metaclass=RingElement):
         self.nVars = max(len(tup) for tup in terms.keys())
         # self.isZero = 
 
+    def __radd__(self, other):
+        return self.__add__(other)
+    
     def __add__(self, other):
         """
         produce new polynomial
         """
-        
+        other = Poly(other)
         newTerms = dict(self.terms)
         
         for key in other.terms:
@@ -255,11 +259,14 @@ class Poly(metaclass=RingElement):
         removeZeros(newTerms)
         return Poly(newTerms)
 
+    def __rsub__(self, other):
+        return self.__sub__(other) * -1
+
     def __sub__(self, other):
         """
         produce new polynomial
         """
-        
+        other = Poly(other)
         newTerms = dict(self.terms)
         
         for key in other.terms:
@@ -271,15 +278,19 @@ class Poly(metaclass=RingElement):
         removeZeros(newTerms)
         return Poly(newTerms)
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
     def __mul__(self, other):
         """
         produce new polynomial
         """
         
-        #newTerms = foil([self.terms, other.terms])
-        #return Poly(newTerms)
-        
         newTerms = {}
+        
+        # convert to Poly if it isn't (assumed to be a number in that case)
+        other = Poly(other)
+        
         for t1 in self.terms.keys():
             for t2 in other.terms.keys():
                 t3 = t1 * t2
@@ -290,15 +301,14 @@ class Poly(metaclass=RingElement):
                     newTerms[t3] += value
                 else:
                     newTerms[t3] = value
-        
+
         removeZeros(newTerms)
         return Poly(newTerms)
         
     def __divmod__(self, other):
         """
-        self/other: polynomial long div
-        
-        !! HALF IMPLEMENTED !! FIX FOR ZERO REMAINDER
+        polynomial long division
+        self/other -> (quotient, remainder)
         """
         
         working = self
@@ -313,11 +323,31 @@ class Poly(metaclass=RingElement):
 
         return (q, working)
     
-    
     def __eq__(self, other):
-        # potentially use hash value since it is cahced... but could collide :/
-        return hash(self.terms) == hash(other.terms)
+        return self is Poly(other)
     
+    def __pow__(self, n):
+        """
+        Simple implementation of fast power raising
+        THis really should inherit from Element from the algebra project ...
+        """
+        if (type(n) != int and type(n) != long) or (n<0):
+            raise TypeError(str.format("Can't raise element to {}.\n Must be non-negative integer.",n))
+        
+        bin_pow = format(n,'b')[::-1]
+        prod = 1 # start with the identity
+        square = prod
+        mask = 1
+        while mask <= n:
+            bit = n & mask
+            if square == 1:
+                square = self
+            else:
+                square = square * square
+            if bit != 0:
+                prod = prod * square
+            mask <<= 1
+        return prod
     
     def __repr__(self):
         return "Poly:[" + self.__str__() + "]"
