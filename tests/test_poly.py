@@ -128,7 +128,7 @@ class test_Prod(unittest.TestCase):
         self.assertNotEqual(hash(p1), hash(p3))
 
 
-class test_poly(unittest.TestCase):
+class testPoly(unittest.TestCase):
 
     def test_empty(self):
         p = Poly()
@@ -233,6 +233,9 @@ class TestPolyArithmetic(unittest.TestCase):
         self.assertEqual(5 * self.p1, self.p1_times_five)
         self.assertEqual(self.p1 * self.five, self.p1_times_five)
     
+    def test_pow_0(self):
+        self.assertIs(self.p1**0, Poly(1))
+    
     def test_pow_1(self):
         self.assertIs(self.p1 ** 1, self.p1)
     
@@ -307,3 +310,84 @@ class TestPolyArithmetic(unittest.TestCase):
         r = Poly({(0,2):1, (0,):1})
         
         self.assertEqual(divmod(p1,p2), (q,r))
+
+
+class TestPolyMultiPow(unittest.TestCase):
+    
+    def setUp(self):
+        self.c2 = 2
+        self.c3 = 3
+        self.c4 = 4
+        self.one = 1
+        self.zero = 0
+        
+        self.p_tup = (self.c2, self.c3)
+        self.y = Poly({(0,1):1})
+        self.x = Poly({(1,):1})
+    
+    def test_single(self):
+        self.assertEqual(Poly.multiPow([self.c2], (self.c3,)), self.c2 ** self.c3)
+    
+    def test_multiple(self):
+        multi_pow = [self.c2, self.c3]
+        multi_var = [self.c3, self.c4]
+        
+        res = self.c3 ** self.c2 * self.c4 ** self.c3
+        
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+    
+    def test_multi_pow_short(self):
+        multi_pow = [self.c2]
+        multi_var = [self.c3, self.c4]
+        
+        res = self.c3 ** self.c2
+        
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+        
+    def test_multi_var_short(self):
+        multi_pow = [self.c2, self.c3]
+        multi_var = [self.c4]
+        
+        res = Poly({(0,self.c3):self.c4 ** self.c2})
+        
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+    
+    def test_multi_var_short(self):
+        multi_pow = [self.c2, self.c3]
+        multi_var = [None, self.c4]
+        
+        res = Poly({(self.c2,0):self.c4 ** self.c3})
+        
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+    
+    def test_multi_var_empty(self):
+        multi_pow = [self.c2, self.c3]
+        multi_var = []
+        
+        res = Poly({(self.c2,self.c3):1})
+        
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+    
+    def test_multi_var_poly(self):
+        multi_pow = self.p_tup
+        multi_var = [self.x, self.y]
+        res = Poly({self.p_tup:1})
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+    
+    def test_multi_var_short_poly(self):
+        multi_pow = [self.c2, self.c3]
+        multi_var = [None, self.x]
+        
+        res = Poly({(self.c2 + self.c3, 0):1})
+        
+        self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
+
+class TestPolyCall(unittest.TestCase):
+    
+    def setUp(self):
+        self.x = Poly({(1,):1})
+        self.y = Poly({(0,1):1})
+        self.z = Poly({(0,0,1):1})
+    
+    def test_x_swap_y(self):
+        self.assertEqual(self.x(self.y), self.y)

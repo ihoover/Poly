@@ -287,8 +287,6 @@ class Poly(metaclass=RingElement):
         """
         
         newTerms = {}
-        
-        # convert to Poly if it isn't (assumed to be a number in that case)
         other = Poly(other)
         
         for t1 in self.terms.keys():
@@ -313,7 +311,6 @@ class Poly(metaclass=RingElement):
         
         working = self
         q = Poly({(1,):0})
-        # import pdb; pdb.set_trace()
         while all(x >=0 for x in working.lead/other.lead):
             factor = working.lead / other.lead
             coeff = working.terms[working.lead]/other.terms[other.lead]
@@ -335,7 +332,7 @@ class Poly(metaclass=RingElement):
             raise TypeError(str.format("Can't raise element to {}.\n Must be non-negative integer.",n))
         
         bin_pow = format(n,'b')[::-1]
-        prod = 1 # start with the identity
+        prod = Poly(1) # start with the identity
         square = prod
         mask = 1
         while mask <= n:
@@ -368,6 +365,32 @@ class Poly(metaclass=RingElement):
             return res
         
         return " + ".join([str(self.terms[key])+" "+ _strKey(key) for key in sorted(list(self.terms.keys()))])
+    
+    @classmethod
+    def multiPow(cls, multi_var, multi_pow):
+        """
+        (1,3,0,5), (2,4,5,2) -> 2**1 * 4**3 * 5**0 * 2**5
+        None is provided for variables which are to stay as variables
+        multi_var is padded with None's if it is shorter
+        multi_pow is padded with zeroes if it is shorter
+        """
+        
+        coeff = 1
+        pows_left = list(multi_pow)
+        for i in range(min(len(multi_pow), len(multi_var))):
+            if multi_var[i] is not None:
+                coeff *= multi_var[i]**multi_pow[i]
+                pows_left[i] = 0
+        
+        # we multiply the coeff on the outside in case it is not a number but a Poly
+        return Poly({Prod(pows_left):1}) * coeff
+
+    def __call__(self, *args):
+        res = 0
+        for term in self.terms:
+            res += self.multiPow(args, term) * self.terms[term]
+        
+        return res
     
     @property
     def lead(self):
