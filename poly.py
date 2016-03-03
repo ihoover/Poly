@@ -2,10 +2,10 @@ from functools import reduce
 import math
 
 def gcd_2(m,n):
-	if n==0:
-		return m
-	r = m%n
-	return(abs(gcd(n,r)))
+    if n==0:
+        return m
+    r = m%n
+    return(abs(gcd(n,r)))
 
 def gcd(*args):
     return reduce(gcd_2, args)
@@ -22,41 +22,6 @@ def tupToDict(tup):
         return tuple(base)
     
     return {basis(i):tup[i] for i in range(len(tup))}
-
-def allSwapsInnerFoil(n_vars, modP):
-    """
-    ge
-    """
-    dicts = []
-    for i in range(n_vars):
-        for j in range(i+1,n_vars):
-            term = [0]*n_vars
-            term[i] = 1
-            term[j] = -1
-            dicts.append(foil([tupToDict(term)]*(modP-1),modP))
-    
-    return dicts
-
-
-def allSwaps(n_vars, neg=True):
-    """
-    returns all the dicts representing the polynomial
-    (xi-xj) for all i<j and i,j<n_vars
-    """
-    
-    dicts = []
-    for i in range(n_vars):
-        d = dict()
-        for j in range(i+1,n_vars):
-            term = [0]*n_vars
-            term[i] = 1
-            if neg:
-                term[j] = -1
-            else:
-                term[j] = 1
-            dicts.append(tupToDict(term))
-    
-    return dicts
 
 def removeZeros(terms):
     """
@@ -178,7 +143,7 @@ class Prod(tuple):
     def __eq__(self, other):
         return tuple(stripTrZs(self)) == tuple(stripTrZs(other))
 
-class RingElement(type):
+class RingElementMeta(type):
     """
     metaclass for elements of which there is only one instence per
     equivalence set (that is of two instances are equal, they are the same)
@@ -188,7 +153,7 @@ class RingElement(type):
         return obj
         
 
-class Poly(metaclass=RingElement):
+class Poly(metaclass=RingElementMeta):
     """
     Class representing polynomial.  Initialized with dictionary representing the polynomial in sumOfProds form:
         12 - 4x^2y + 6xy^3 --> {(0,0):12, (2,1):-4, (1,3):6}
@@ -326,13 +291,13 @@ class Poly(metaclass=RingElement):
     def __pow__(self, n):
         """
         Simple implementation of fast power raising
-        THis really should inherit from Element from the algebra project ...
+        Poly really should inherit from Element from the algebra project ...
         """
         if (type(n) != int and type(n) != long) or (n<0):
             raise TypeError(str.format("Can't raise element to {}.\n Must be non-negative integer.",n))
         
         bin_pow = format(n,'b')[::-1]
-        prod = Poly(1) # start with the identity
+        prod = 1 # start with the identity
         square = prod
         mask = 1
         while mask <= n:
