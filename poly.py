@@ -101,11 +101,25 @@ class Prod(tuple):
     (1,2,3)-->x*y^2*z^3
     """
     
-    def __mul__(self, other):
-        length = max(len(self), len(other))
-        res = list(0 for i in range(length))
+    def __init__(self, *args, **kwargs):
         
-        for i in range(length):
+        super().__init__()
+        
+        # throw exception if the last element is zero (and not a constant)
+        if self[-1] == 0 and len(self)>1:
+            msg = str.format('Cannot create `Prod` with terminal zero: {}', self)
+            raise ValueError(msg)
+        
+        self.length = len(self)
+    
+    def __mul__(self, other):
+        
+        if self.length == other.length:
+            return Prod(self[i] + other[i] for i in range(self.length))
+        
+        max_length = max(self.length, other.length)
+        res = [0]*max_length
+        for i in range(max_length):
             try:
                 res[i] += self[i]
             except IndexError:
@@ -116,12 +130,16 @@ class Prod(tuple):
                 pass
         
         return Prod(res)
-    
-    def __truediv__(self, other):
-        length = max(len(self), len(other))
-        res = list(0 for i in range(length))
         
-        for i in range(length):
+    def __truediv__(self, other):
+    
+        if self.length == other.length:
+            return Prod(stripTrZs([self[i] - other[i] for i in range(self.length)]))
+
+        max_length = max(self.length, other.length)
+        res = [0]*max_length
+        
+        for i in range(max_length):
             try:
                 res[i] += self[i]
             except IndexError:
@@ -131,19 +149,8 @@ class Prod(tuple):
             except IndexError:
                 pass
         
-        return Prod(res)
-    
-    def __hash__(self):
-        """
-        changing the tuple hash function to ignore trailing zeros, so
-        (1,2,3) has the same hash as (1,2,3,0,0,0)
-        """
-        
-        return hash(tuple(stripTrZs(self)))
-    
-    def __eq__(self, other):
-        return tuple(stripTrZs(self)) == tuple(stripTrZs(other))
-    
+        return Prod(stripTrZs(res))
+
     @classmethod
     def lcm(cls, t1, t2):
         res = []
@@ -422,6 +429,8 @@ class Poly(metaclass=RingElementMeta):
                 pows_left[i] = 0
         
         # we multiply the coeff on the outside in case it is not a number but a Poly
+        if pows_left[-1] == 0 and len(pows_left) > 1:
+            pows_left = stripTrZs(pows_left)
         return Poly({Prod(pows_left):1}) * coeff
 
     def __call__(self, *args):
@@ -439,3 +448,11 @@ class Poly(metaclass=RingElementMeta):
         if self._lead is None:
             self._lead = Prod(sorted(self.terms.keys())[-1])
         return self._lead
+
+##########################################
+#
+#   now import extras so "import poly" imports the whole package
+#
+##########################################
+
+from poly_algebra import *

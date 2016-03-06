@@ -87,7 +87,7 @@ class TestGroebnerBasis(unittest.TestCase):
             for combo in combinations(product(range(3), repeat=3), num_terms):
                 terms = {}
                 for tup in combo:
-                    terms[tup] = 1
+                    terms[stripTrZs(tup)] = 1
                 p = Poly(terms)
                 self.polys.append(p)
     
@@ -97,7 +97,6 @@ class TestGroebnerBasis(unittest.TestCase):
         g3 = self.g3
         
         basis = groebnerBasis(g1, g2)
-        for (p1, p2) in combinations(self.polys, 2):
-            for c2 in [-1,2,3]:
-                (q,r) = divmodSet(p1*g1 + c2*p2*g2, basis)
-                self.assertEqual(r, 0)
+        for (p1, p2) in combinations(basis, 2):
+            (q,r) = divmodSet(normalForm(p1, p2), basis, leadReduce=False)
+            self.assertEqual(r, 0)

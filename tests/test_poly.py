@@ -74,6 +74,11 @@ class test_Prod(unittest.TestCase):
         d = {(1,0,0):1, (0,1,0):2, (0,0,1):3}
         
         self.assertEqual(d, tupToDict(tup))
+    
+    def test_valueError(self):
+        tup = (0,1,0)
+        with self.assertRaises(ValueError):
+            Prod(tup)
 
     def test_add(self):
         p1 = Prod([1,2,3])
@@ -110,7 +115,7 @@ class test_Prod(unittest.TestCase):
         self.assertEqual(numTrZs(t2), 2)
         self.assertEqual(numTrZs(t3), 3)
     
-    def test_numTrZs(self):
+    def test_stripTrZs(self):
         t0 = (1,2,3)
         t1 = (1,2,0)
         t2 = (1,0,0)
@@ -120,14 +125,6 @@ class test_Prod(unittest.TestCase):
         self.assertEqual(stripTrZs(t1), (1,2))
         self.assertEqual(stripTrZs(t2), (1,))
         self.assertEqual(stripTrZs(t3), (0,))
-        
-    def test_hash(self):
-        p1 = Prod((1,2,3,0))
-        p2 = Prod((1,2,3))
-        p3 = Prod((1,2,0))
-        
-        self.assertEqual(hash(p1), hash(p2))
-        self.assertNotEqual(hash(p1), hash(p3))
     
     def test_lcm_sameLength(self):
         p1 = (1,2,3)
@@ -198,7 +195,7 @@ class TestPolyArithmetic(unittest.TestCase):
 
         
         # x^2 + y^2 + 1
-        self.p1 = Poly({(2,0):1, (0,2):1, (0,):1})
+        self.p1 = Poly({(2,):1, (0,2):1, (0,):1})
         
         # xy + y^2 - 3
         self.p2 = Poly({(1,1):1, (0,2):1, (0,):-3})
@@ -208,16 +205,16 @@ class TestPolyArithmetic(unittest.TestCase):
         
         self.p1_plus_p2 = Poly({(2,):1, (0,2):2, (1,1):1, (0,):-2})
         self.p1_minus_p2 = Poly({(2,):1, (1,1):-1, (0,):4})
-        self.p1_plus_1 = Poly({(2,0):1, (0,2):1, (0,):2})
-        self.p1_minus_1 = Poly({(2,0):1, (0,2):1})
-        self.one_minus_p1 = Poly({(2,0):-1, (0,2):-1})
+        self.p1_plus_1 = Poly({(2,):1, (0,2):1, (0,):2})
+        self.p1_minus_1 = Poly({(2,):1, (0,2):1})
+        self.one_minus_p1 = Poly({(2,):-1, (0,2):-1})
         
         self.p1_times_p2 = Poly({(3,1):1, (2,2):1, (2,):-3, (1,3):1, 
                                 (1,1):1, (0,4):1, (0,2):-2, (0,):-3})
-        self.p1_times_five = Poly({(2,0):5, (0,2):5, (0,):5})
+        self.p1_times_five = Poly({(2,):5, (0,2):5, (0,):5})
         
         # x^10+5 x^8 y^2+10 x^6 y^4+10 x^4 y^6+5 x^2 y^8+y^10
-        self.p_simple = Poly({(2,0):1, (0,2):1})
+        self.p_simple = Poly({(2,):1, (0,2):1})
         self.pow_const = 5
         self.p1_pow_const = Poly({(10,):1, (8,2):5, (6,4):10, (4,6):10, (2,8):5, (0,10):1})
         self.p2_mod_y = Poly({(0,):-3})
@@ -266,10 +263,10 @@ class TestPolyArithmetic(unittest.TestCase):
     
     def test_mul_cancel(self):
         # x^2 + y^2
-        p1 = Poly({(2,0):1, (0,2):1})
+        p1 = Poly({(2,):1, (0,2):1})
         
         # x^2 - y^2
-        p2 = Poly({(2,0):1, (0,2):-1})
+        p2 = Poly({(2,):1, (0,2):-1})
         
         # x^4 - y^4
         result = {(4,):1, (0,4):-1}
@@ -321,7 +318,7 @@ class TestPolyArithmetic(unittest.TestCase):
         
     def test_mul_var_divmod(self):
         #x + y
-        p2= Poly({(1,0):1, (0,1):1})
+        p2= Poly({(1,):1, (0,1):1})
         
         # x^2+1
         p1 = Poly({(2,):1, (0,):1})

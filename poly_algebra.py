@@ -1,4 +1,4 @@
-from poly import Poly, Prod
+from poly import *
 
 def divmodSet(numerator, basis, leadReduce=False):
     """
@@ -7,13 +7,15 @@ def divmodSet(numerator, basis, leadReduce=False):
         quotient: the factor for each polynomial in `basis`, in the order of `basis`
         remainder: the remainder
     """
-    q_list = []
+    q_list = [0]*len(basis)
     for element in basis:
         if leadReduce:
             (q,numerator) = numerator.leadReduce(element)
         else:
             (q,numerator) = divmod(numerator, element)
         q_list.append(q)
+        if numerator == 0:
+            break
     
     # list of quotients, and the remainder
     return (q_list, numerator)
@@ -50,7 +52,7 @@ def groebnerBasis(*args):
             for j in range(0, i):
                 
                 normal_form = normalForm(polys[i], polys[j])
-                (q,r) = divmodSet(normal_form, polys)
+                (q,r) = divmodSet(normal_form, polys, leadReduce=False)
                 
                 if r != 0:
                     new_polys.append(r)

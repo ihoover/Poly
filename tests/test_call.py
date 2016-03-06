@@ -48,7 +48,7 @@ class TestPolyMultiPow(unittest.TestCase):
         multi_pow = [self.c2, self.c3]
         multi_var = [None, self.c4]
         
-        res = Poly({(self.c2,0):self.c4 ** self.c3})
+        res = Poly({(self.c2,):self.c4 ** self.c3})
         
         self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
     
@@ -70,7 +70,7 @@ class TestPolyMultiPow(unittest.TestCase):
         multi_pow = [self.c2, self.c3]
         multi_var = [None, self.x]
         
-        res = Poly({(self.c2 + self.c3, 0):1})
+        res = Poly({(self.c2 + self.c3,):1})
         
         self.assertEqual(Poly.multiPow(multi_var, multi_pow), res)
 
