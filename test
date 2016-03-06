@@ -3,7 +3,7 @@
 > tests/__init__.py # clear the file
 echo "import os; import sys" >> tests/__init__.py
 echo "sys.path.insert(0, os.path.abspath(os.pardir))" >> tests/__init__.py
-find -name test*.py | sed -r s,\(^\./[a-z]*/\)\(test_[a-z]*\)\(\.py\),from\ \\2\ import\ \*, | tee -a tests/__init__.py
+find -name test*.py | sed -r s,\(^\./[a-z]*/\)\(test_[a-z_]*\)\(\.py\),from\ \\2\ import\ \*, | tee -a tests/__init__.py
 echo "unittest.main()" >> tests/__init__.py
 cd tests
 python3 __init__.py

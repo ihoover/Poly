@@ -128,6 +128,20 @@ class test_Prod(unittest.TestCase):
         
         self.assertEqual(hash(p1), hash(p2))
         self.assertNotEqual(hash(p1), hash(p3))
+    
+    def test_lcm_sameLength(self):
+        p1 = (1,2,3)
+        p2 = (2,3,1)
+        lcm = (2,3,3)
+        
+        self.assertEqual(Prod.lcm(p1,p2), lcm)
+    
+    def test_lcm_diffLength(self):
+        p1 = (1,2,3)
+        p2 = (2,3)
+        lcm = (2,3,3)
+        
+        self.assertEqual(Prod.lcm(p1,p2), lcm)
 
 
 class testPoly(unittest.TestCase):
@@ -178,7 +192,12 @@ class TestPolyArithmetic(unittest.TestCase):
         define some useful poynomials
         """
         
-        # x^2 + y^2
+        self.x = Poly({(1,):1})
+        self.y = Poly({(0,1):1})
+        self.z = Poly({(0,0,1):1})
+
+        
+        # x^2 + y^2 + 1
         self.p1 = Poly({(2,0):1, (0,2):1, (0,):1})
         
         # xy + y^2 - 3
@@ -201,6 +220,7 @@ class TestPolyArithmetic(unittest.TestCase):
         self.p_simple = Poly({(2,0):1, (0,2):1})
         self.pow_const = 5
         self.p1_pow_const = Poly({(10,):1, (8,2):5, (6,4):10, (4,6):10, (2,8):5, (0,10):1})
+        self.p2_mod_y = Poly({(0,):-3})
 
     def test_add(self):
         self.assertEqual(self.p1 + self.p2, self.p1_plus_p2)
@@ -312,3 +332,32 @@ class TestPolyArithmetic(unittest.TestCase):
         r = Poly({(0,2):1, (0,):1})
         
         self.assertEqual(divmod(p1,p2), (q,r))
+    
+    def test_notJustLeadReduction(self):
+        x = self.x
+        y = self.y
+        z = self.z
+        
+        den = y**2 +1
+        p1 = x * z + den
+        
+        (q,r) = divmod(p1,den)
+        
+        self.assertEqual(q, 1)
+        self.assertEqual(r, x * z)
+    
+    def test_neg(self):
+        self.assertEqual(-self.p1, self.p1*-1)
+    
+    def test_mod(self):
+        y = Poly({(0,1):1})
+        self.assertEqual(self.p2 % y, self.p2_mod_y)
+    
+    def test_abs_poly(self):
+        
+        self.assertEqual(abs(self.p1),self.p1)
+    
+    def test_abs_const(self):
+        
+        self.assertEqual(abs(self.one), 1)
+        self.assertEqual(abs(-self.one), 1)

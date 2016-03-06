@@ -94,6 +94,7 @@ class frozendict(dict):
     def __setitem__(self, key, new_value):
         raise TypeError("'frozendict' object doesn't support item assignment")
 
+
 class Prod(tuple):
     """
     Represents a product of variables
@@ -142,6 +143,23 @@ class Prod(tuple):
     
     def __eq__(self, other):
         return tuple(stripTrZs(self)) == tuple(stripTrZs(other))
+    
+    @classmethod
+    def lcm(cls, t1, t2):
+        res = []
+        for i in range(max(len(t1), len(t2))):
+            try:
+                res.append(t1[i])
+            except IndexError:
+                res.append(0)
+            
+            try:
+                if t2[i] > res[-1]:
+                    res[-1] = t2[i]
+            except IndexError:
+                pass
+        
+        return Prod(res)
 
 class RingElementMeta(type):
     """
@@ -200,11 +218,20 @@ class Poly(metaclass=RingElementMeta):
         return new
     
     def __init__(self, terms):
+    
+        """
+        should put more expensive stuff here, since I go out of my way to minimize number of calls
+        """
         
         self.terms = terms
         self._lead = None
         self.nVars = max(len(tup) for tup in terms.keys())
-        # self.isZero = 
+        self.isConstant = False 
+        self.value = None
+
+        if len(self.terms) == 1 and (0,) in self.terms:
+            self.isConstant = True
+            self.value = self.terms[(0,)]
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -267,15 +294,44 @@ class Poly(metaclass=RingElementMeta):
 
         removeZeros(newTerms)
         return Poly(newTerms)
-        
+    
     def __divmod__(self, other):
         """
-        polynomial long division
+        reduce self by other, producing a quotient and remainder
+        """
+        
+        working = self
+        q = Poly({(1,):0})
+        
+        break_now = False
+        while True:
+            break_now = True
+            for term in reversed(sorted(working.terms.keys())):
+                if all(x >=0 for x in term/other.lead):
+                    factor = term/ other.lead
+                    coeff  = working.terms[term]/other.terms[other.lead]
+                    
+                    q += Poly({factor: coeff})
+                    working = self  - q*other
+                    
+                    break_now = False
+                    break
+            
+            if break_now:
+                break
+        
+        return (q, working)
+    
+    def leadReduce(self, other):
+        """
+        applies the reduction only to the leading term
         self/other -> (quotient, remainder)
         """
         
         working = self
         q = Poly({(1,):0})
+        
+        
         while all(x >=0 for x in working.lead/other.lead):
             factor = working.lead / other.lead
             coeff = working.terms[working.lead]/other.terms[other.lead]
@@ -284,6 +340,14 @@ class Poly(metaclass=RingElementMeta):
             working = self - q*other
 
         return (q, working)
+    
+    def __mod__(self, other):
+        """
+        returns the remainder from divmod
+        """
+        
+        (q,r) = divmod(self,other)
+        return r
     
     def __eq__(self, other):
         return self is Poly(other)
@@ -331,10 +395,20 @@ class Poly(metaclass=RingElementMeta):
         
         return " + ".join([str(self.terms[key])+" "+ _strKey(key) for key in sorted(list(self.terms.keys()))])
     
+    def __abs__(self):
+        if self.isConstant:
+            return abs(self.value)
+        else:
+            return self
+    
+    def __neg__(self):
+        return self*-1
+    
     @classmethod
     def multiPow(cls, multi_var, multi_pow):
         """
-        (1,3,0,5), (2,4,5,2) -> 2**1 * 4**3 * 5**0 * 2**5
+        raise a multivariable to a multipower
+        (2,4,5,2), (1,3,0,5) -> 2**1 * 4**3 * 5**0 * 2**5
         None is provided for variables which are to stay as variables
         multi_var is padded with None's if it is shorter
         multi_pow is padded with zeroes if it is shorter
