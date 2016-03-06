@@ -8,12 +8,12 @@ def divmodSet(numerator, basis, leadReduce=False):
         remainder: the remainder
     """
     q_list = [0]*len(basis)
-    for element in basis:
+    for i in range(len(basis)):
         if leadReduce:
-            (q,numerator) = numerator.leadReduce(element)
+            (q,numerator) = numerator.leadReduce(basis[i])
         else:
-            (q,numerator) = divmod(numerator, element)
-        q_list.append(q)
+            (q,numerator) = divmod(numerator, basis[i])
+        q_list[i] = q
         if numerator == 0:
             break
     
