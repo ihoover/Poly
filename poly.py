@@ -106,29 +106,24 @@ class Prod(tuple):
         super().__init__()
         
         # throw exception if the last element is zero (and not a constant)
-        if self[-1] == 0 and len(self)>1:
+        self.length = len(self)
+        if self[-1] == 0 and self.length>1:
             msg = str.format('Cannot create `Prod` with terminal zero: {}', self)
             raise ValueError(msg)
         
-        self.length = len(self)
     
     def __mul__(self, other):
         
         if self.length == other.length:
             return Prod(self[i] + other[i] for i in range(self.length))
         
-        max_length = max(self.length, other.length)
-        res = [0]*max_length
-        for i in range(max_length):
-            try:
-                res[i] += self[i]
-            except IndexError:
-                pass
-            try:
-                res[i] += other[i]
-            except IndexError:
-                pass
+        longer, shorter = (self, other) if (self.length > other.length) else (other, self)
+
+        res = list(longer)
         
+        for i in range(shorter.length):
+            res[i] += shorter[i]
+
         return Prod(res)
         
     def __truediv__(self, other):
@@ -136,20 +131,19 @@ class Prod(tuple):
         if self.length == other.length:
             return Prod(stripTrZs([self[i] - other[i] for i in range(self.length)]))
 
-        max_length = max(self.length, other.length)
-        res = [0]*max_length
+        longer, shorter = (self, other) if (self.length > other.length) else (other, self)
+        res = list(longer)
+        if longer is self:
+            for i in range(shorter.length):
+                res[i] -= shorter[i]
         
-        for i in range(max_length):
-            try:
-                res[i] += self[i]
-            except IndexError:
-                pass
-            try:
-                res[i] -= other[i]
-            except IndexError:
-                pass
-        
-        return Prod(stripTrZs(res))
+        else:
+            for i in range(shorter.length):
+                res[i] = shorter[i] - longer[i]
+            for i in range(shorter.length, longer.length):
+                res[i] =- longer[i]
+
+        return Prod(res)
 
     @classmethod
     def lcm(cls, t1, t2):
@@ -187,6 +181,61 @@ class Poly(metaclass=RingElementMeta):
     
     _instances = {}
     _zero_terms = {(0,):0}
+    
+    @classmethod
+    def mul_terms(cls, terms1, terms2):
+        """
+        returns new dictionary of the product
+        """
+        
+        new_terms = {}
+        
+        for t1 in terms1.keys():
+            for t2 in terms2.keys():
+                t3 = t1 * t2
+                value = terms1[t1]*terms2[t2]
+                new_terms[t3] = new_terms.get(t3, 0) + value
+        
+        removeZeros(new_terms)
+        return new_terms
+    
+    @classmethod
+    def add_terms(cls, terms1, terms2, extend=False):
+        """
+        retursn the dict of the sum
+        
+        Extend: if true will exted terms1 with the result and not return a new dictionary
+        """
+        
+        if extend:
+            new_terms = terms1
+        else:
+            new_terms = dict(terms1)
+        
+        for t2 in terms2:
+            new_terms[t2] = new_terms.get(t2, 0) + terms2[t2]
+        
+        removeZeros(new_terms)
+        return new_terms
+    
+    @classmethod
+    def sub_terms(cls, terms1, terms2, extend=False):
+        """
+        retursn dict of diff, terms1 - terms2
+        
+        Extend: if true will exted terms1 with the result and not return a new dictionary
+        """
+        
+        if extend:
+            new_terms = terms1
+        else:
+            new_terms = dict(terms1)
+        
+        for t2 in terms2:
+            new_terms[t2] = new_terms.get(t2, 0) - terms2[t2]
+        
+        removeZeros(new_terms)
+        return new_terms
     
     def __new__(cls, *args, **kwargs):
         
@@ -248,15 +297,7 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         other = Poly(other)
-        newTerms = dict(self.terms)
-        
-        for key in other.terms:
-            if key in newTerms:
-                newTerms[key] += other.terms[key]
-            else:
-                newTerms[key] = other.terms[key]
-        removeZeros(newTerms)
-        return Poly(newTerms)
+        return Poly(Poly.add_terms(self.terms, other.terms))
 
     def __rsub__(self, other):
         return self.__sub__(other) * -1
@@ -266,16 +307,8 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         other = Poly(other)
-        newTerms = dict(self.terms)
-        
-        for key in other.terms:
-            if key in newTerms:
-                newTerms[key] -= other.terms[key]
-            else:
-                newTerms[key] = -other.terms[key]
-        
-        removeZeros(newTerms)
-        return Poly(newTerms)
+        other = Poly(other)
+        return Poly(Poly.sub_terms(self.terms, other.terms))
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -285,41 +318,26 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         
-        newTerms = {}
-        other = Poly(other)
-        
-        for t1 in self.terms.keys():
-            for t2 in other.terms.keys():
-                t3 = t1 * t2
-                # t3 = Prod(addTuples(t1,t2))
-                value = self.terms[t1]*other.terms[t2]
-                
-                if t3 in newTerms:
-                    newTerms[t3] += value
-                else:
-                    newTerms[t3] = value
-
-        removeZeros(newTerms)
-        return Poly(newTerms)
+        nterms = Poly.mul_terms(self.terms, Poly(other).terms)
+        return Poly(nterms)
     
     def __divmod__(self, other):
         """
         reduce self by other, producing a quotient and remainder
         """
         
-        working = self
-        q = Poly({(1,):0})
+        working_terms = dict(self.terms)
+        q_terms = {Prod((1,)):0}
         
         break_now = False
         while True:
             break_now = True
-            for term in reversed(sorted(working.terms.keys())):
-                if all(x >=0 for x in term/other.lead):
-                    factor = term/ other.lead
-                    coeff  = working.terms[term]/other.terms[other.lead]
-                    
-                    q += Poly({factor: coeff})
-                    working = self  - q*other
+            for term in reversed(sorted(working_terms.keys())):
+                factor = term/other.lead
+                if all(x >=0 for x in factor):
+                    coeff  = working_terms[term]/other.terms[other.lead]
+                    Poly.add_terms(q_terms, {factor: coeff}, extend=True)
+                    Poly.sub_terms(working_terms, Poly.mul_terms({factor: coeff}, other.terms), extend=True)
                     
                     break_now = False
                     break
@@ -327,7 +345,7 @@ class Poly(metaclass=RingElementMeta):
             if break_now:
                 break
         
-        return (q, working)
+        return (Poly(q_terms), Poly(working_terms))
     
     def leadReduce(self, other):
         """

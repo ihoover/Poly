@@ -1,4 +1,5 @@
 from poly import *
+from itertools import combinations
 
 def divmodSet(numerator, basis, leadReduce=False):
     """
@@ -8,17 +9,41 @@ def divmodSet(numerator, basis, leadReduce=False):
         remainder: the remainder
     """
     q_list = [0]*len(basis)
-    for element in basis:
+    for i in range(len(basis)):
         if leadReduce:
-            (q,numerator) = numerator.leadReduce(element)
+            (q,numerator) = numerator.leadReduce(basis[i])
         else:
-            (q,numerator) = divmod(numerator, element)
-        q_list.append(q)
+            (q,numerator) = divmod(numerator, basis[i])
+        q_list[i] = q
         if numerator == 0:
             break
     
     # list of quotients, and the remainder
     return (q_list, numerator)
+
+def reduceList(polys, trim=True, except_last=False):
+    """
+    reduces each polynomial by the others.
+    Trim: if true removes polynomials that reduce to zero
+    except_last: if true, treats the last as already reduced
+    """
+    if len(polys) <= 1:
+        return polys
+    print(len(polys))
+    offset = 0
+    if except_last:
+        offset = 1
+
+    remainders = []
+    for i in range(len(polys) - offset):
+        temp_basis = remainders + polys[i+1:]
+        (q,r) = divmodSet(polys[i], temp_basis, leadReduce=False)
+        if (r != 0) or (not trim):
+            remainders.append(r)
+    
+    remainders.extend(polys[i+1:])
+    
+    return remainders
 
 def normalForm(p1, p2):
     """
@@ -40,26 +65,24 @@ def groebnerBasis(*args):
     compute a groebnerBasis from the polynomials in args via Buchberger's algorithm
     """
     polys = list(args)
+    if len(polys) == 1:
+        return polys
+    polys = reduceList(polys)
     new_polys = []
     i_old = 0 # reduces redundant pair checks
+
     while True:
-        # append new polys
-        polys.extend(new_polys)
-        new_polys[:] = []
+        all_done = True
+        for (p1, p2) in combinations(polys, 2):
+            normal_form = normalForm(p1, p2)
+            (q,r) = divmodSet(normal_form, polys)
+            if r != 0:
+                polys.append(r)
+                polys = reduceList(polys, except_last=True)
+                all_done = False
+                break
         
-        # compute normal forms and remainders for all pairs
-        for i in range(i_old + 1, len(polys)):
-            for j in range(0, i):
-                
-                normal_form = normalForm(polys[i], polys[j])
-                (q,r) = divmodSet(normal_form, polys, leadReduce=False)
-                
-                if r != 0:
-                    new_polys.append(r)
-                    
-        i_old = i
-        if not new_polys:
-            # guarenteed to break by Hilbert's Basis theorem... Woo!
+        if all_done:
             break
     
     return polys

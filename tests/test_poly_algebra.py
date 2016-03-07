@@ -1,7 +1,6 @@
 import os; import sys
 sys.path.insert(0, os.path.abspath(os.pardir))
 import unittest
-import sys
 from itertools import product, combinations
 from poly_algebra import *
 
@@ -66,6 +65,51 @@ class TestNormalForm(unittest.TestCase):
         self.assertEqual(normalForm(p1,p2), normal_form)
 
 
+def mock_divmodSet(denom, basis):
+    
+    return (None, -denom)
+
+from unittest.mock import patch
+class testReduceList(unittest.TestCase):
+    
+    @patch('poly_algebra.divmodSet', return_value=(None, -1))
+    def test_calls_divmodSet_correctly(self, mock_func):
+        basis = [0,1,2,3,4,5]
+        result = reduceList(basis)
+        
+        self.assertEqual(result, [-1]*len(basis))
+        self.assertEqual(mock_func.call_count, len(basis))
+        
+        for i in range(len(basis)):
+            basis_called_expected = [-1 for x in range(i)] + basis[i+1:]
+            args, kwargs = mock_func.call_args_list[i]
+            numerator = args[0]
+            basis_called = args[1]
+            
+            self.assertEqual(numerator, basis[i])
+            self.assertEqual(basis_called, basis_called_expected)
+    
+    @patch('poly_algebra.divmodSet', side_effect=mock_divmodSet)
+    def test_trim(self, mock_func):
+        basis = [-2,-1,0,1,2]
+        basis_after = [-x for x in basis if x!=0]
+        result = reduceList(basis)
+        self.assertEqual(result, basis_after)
+    
+    @patch('poly_algebra.divmodSet', side_effect=mock_divmodSet)
+    def test_noTrim(self, mock_func):
+        basis = [-2,-1,0,1,2]
+        basis_after = [-x for x in basis]
+        result = reduceList(basis, trim=False)
+        self.assertEqual(result, basis_after)
+    
+    @patch('poly_algebra.divmodSet', return_value=(None, -1))
+    def test_except_last(self, mock_func):
+        basis = [-2,-1,0,1,2]
+        basis_after = [-1 for i in range(len(basis)-1) ] + basis[-1:]
+        result = reduceList(basis, except_last=True)
+        self.assertEqual(result, basis_after)
+
 class TestGroebnerBasis(unittest.TestCase):
     
     def setUp(self):
@@ -91,7 +135,7 @@ class TestGroebnerBasis(unittest.TestCase):
                 p = Poly(terms)
                 self.polys.append(p)
     
-    def test2(self):
+    def test2_polys(self):
         g1 = self.g1
         g2 = self.g2
         g3 = self.g3
@@ -100,3 +144,8 @@ class TestGroebnerBasis(unittest.TestCase):
         for (p1, p2) in combinations(basis, 2):
             (q,r) = divmodSet(normalForm(p1, p2), basis, leadReduce=False)
             self.assertEqual(r, 0)
+     
+    def test1_poly(self):
+        basis = groebnerBasis(self.g1)
+        self.assertEqual(len(basis), 1)
+        self.assertEqual(basis[0], self.g1)
