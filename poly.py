@@ -1,4 +1,5 @@
 from functools import reduce
+from fractions import Fraction
 import math
 
 def gcd_2(m,n):
@@ -77,6 +78,7 @@ class frozendict(dict):
 
         super().__init__(*args,**kwargs)
         self._hash = None
+        self._frozen = True
 
         
         # check that all values are hashable
@@ -92,7 +94,16 @@ class frozendict(dict):
         return self._hash
     
     def __setitem__(self, key, new_value):
-        raise TypeError("'frozendict' object doesn't support item assignment")
+        if self._frozen:
+            raise TypeError("'frozendict' object doesn't support item assignment")
+        else:
+            super().__setitem__(key, new_value)
+    
+    def freez(self):
+        self._frozen = True
+    
+    def thaw(self):
+        self._frozen = False
 
 
 class Prod(tuple):
@@ -187,6 +198,7 @@ class Poly(metaclass=RingElementMeta):
     
     _instances = {}
     _zero_terms = {(0,):0}
+    _rings = ["real", None]
     
     def __new__(cls, *args, **kwargs):
         
@@ -224,10 +236,17 @@ class Poly(metaclass=RingElementMeta):
         Poly._instances[fterms] = new
         return new
     
-    def __init__(self, terms):
+    def __init__(self, terms, ring=None):
     
         """
         should put more expensive stuff here, since I go out of my way to minimize number of calls
+        
+        In the future, more support for different types of rings. Now specifying none along with 
+        integer (or Fraction) coefficients means it will convert all the coeffs to Fraction objects
+        to de exact arithmetic.
+        
+        If "real" is specified, the coeffs are letf alone, which might improve the speed of certain
+        computations
         """
         
         self.terms = terms
@@ -239,6 +258,16 @@ class Poly(metaclass=RingElementMeta):
         if len(self.terms) == 1 and (0,) in self.terms:
             self.isConstant = True
             self.value = self.terms[(0,)]
+        
+        if ring not in Poly._rings:
+            msg = str.format("Specified ring not supported: '{}'.", ring)
+            raise ValueError(msg)
+        
+        if ring is None:
+            self.terms.thaw()
+            for term in self.terms:
+                self.terms[term] = Fraction(self.terms[term])
+            self.terms.freez()
 
     def __radd__(self, other):
         return self.__add__(other)

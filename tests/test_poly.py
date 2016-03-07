@@ -35,8 +35,25 @@ class Test_frozendict(unittest.TestCase):
         for key in self.immutD:
             self.assertEqual(self.immutD[key],f[key])
 
-    def test_noChange(self):
-        for key in self.frozen.keys():
+    def test_frozenDefault(self):
+        for key in frozendict(self.immutD):
+            with self.assertRaises(TypeError, msg="'frozendict' object doesn't support item assignment"):
+                self.frozen[key] = 0
+    
+    def test_thaw(self):
+        f = frozendict(self.immutD)
+        f.thaw()
+        for key in f:
+            f[key] += 1
+        
+        for key in f:
+            self.assertNotEqual(f[key], self.immutD[key])
+    
+    def test_frozenAfterThaw(self):
+        f = frozendict(self.immutD)
+        f.thaw()
+        f.freez()
+        for key in f:
             with self.assertRaises(TypeError, msg="'frozendict' object doesn't support item assignment"):
                 self.frozen[key] = 0
 
@@ -315,7 +332,13 @@ class TestPolyArithmetic(unittest.TestCase):
         
         p1=Poly({(9,):3,(7,):-2, (4,):12, (2,):2, (0,):-2})
         self.assertEqual(divmod(p1*p1*p1, p1), (p1*p1, Poly()))
+    
+    def test_divmod_stability(self):
         
+        p = Poly({(2,):1, (0,):1})
+        (q,r) = divmod(p**70, p)
+        self.assertEqual(r,0)
+    
     def test_mul_var_divmod(self):
         #x + y
         p2= Poly({(1,):1, (0,1):1})
