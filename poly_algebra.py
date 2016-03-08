@@ -29,7 +29,6 @@ def reduceList(polys, trim=True, except_last=False):
     """
     if len(polys) <= 1:
         return polys
-    print(len(polys))
     offset = 0
     if except_last:
         offset = 1

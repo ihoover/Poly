@@ -65,9 +65,10 @@ class TestNormalForm(unittest.TestCase):
         self.assertEqual(normalForm(p1,p2), normal_form)
 
 
-def mock_divmodSet(denom, basis):
+def mock_divmodSet(denom, basis, **kwargs):
     
     return (None, -denom)
+
 
 from unittest.mock import patch
 class testReduceList(unittest.TestCase):

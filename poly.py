@@ -336,7 +336,6 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         other = Poly(other)
-        other = Poly(other)
         return Poly(Poly.sub_terms(self.terms, other.terms))
 
     def __rmul__(self, other):
