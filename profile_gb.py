@@ -5,8 +5,8 @@ x = Poly({(1,):1})
 y = Poly({(0,1):1})
 z = Poly({(0,0,1):1})
 
-g1 = x**2 * y**4 + y**2*z + z**2
-g2 = x**3*y**2*z + x**2
+g1 = x**8* y**4 + x**2 + y**2
+g2 = x**5*y**2 + x**2+z
 g3 = x**2+y
 
 cProfile.run("basis = groebnerBasis(g1,g2, g3)", sort="tottime")

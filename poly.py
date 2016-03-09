@@ -1,5 +1,6 @@
 from functools import reduce
 from fractions import Fraction
+import fractions
 import math
 
 def gcd_2(m,n):
@@ -9,7 +10,25 @@ def gcd_2(m,n):
     return(abs(gcd(n,r)))
 
 def gcd(*args):
-    return reduce(gcd_2, args)
+    return reduce(fractions.gcd, args)
+
+def lcm_2(m,n):
+    """
+    Returns the least common multiple of integers m and n
+    if one is zero, it returns 0
+    
+    return a non-negative number
+    """
+    if all((m,n)):
+        return m*n//gcd_2(m,n)
+    
+    # else, return the non-zero
+    # unless both zero, in which case return 0
+    zero, non_zero = (m,n) if m==0 else (n,m)
+    return zero
+
+def lcm(*args):
+    return reduce(lcm_2, args)
 
 def tupToDict(tup):
     """
@@ -249,7 +268,7 @@ class Poly(metaclass=RingElementMeta):
         removeZeros(new_terms)
         return new_terms
     
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, check = True, **kwargs):
         
         
         if (len(args) < 1):
@@ -266,15 +285,16 @@ class Poly(metaclass=RingElementMeta):
         
         if (not terms) or (all(terms[key] == 0 for key in terms)):
             terms = Poly._zero_terms
-
-        if not(isinstance(terms, frozendict)):
-            for key in list(terms.keys()):
-                if isinstance(key, Prod):
-                    continue
-                else:
-                    new_key = Prod(key)
-                    value = terms.pop(key)
-                    terms[new_key] = value
+        
+        if check:
+            if not(isinstance(terms, frozendict)):
+                for key in list(terms.keys()):
+                    if isinstance(key, Prod):
+                        continue
+                    else:
+                        new_key = Prod(key)
+                        value = terms.pop(key)
+                        terms[new_key] = value
         
         fterms = frozendict(terms)
         if fterms in Poly._instances:
@@ -285,7 +305,7 @@ class Poly(metaclass=RingElementMeta):
         Poly._instances[fterms] = new
         return new
     
-    def __init__(self, terms, ring=None):
+    def __init__(self, terms, ring=None, check=True):
     
         """
         should put more expensive stuff here, since I go out of my way to minimize number of calls
@@ -296,6 +316,9 @@ class Poly(metaclass=RingElementMeta):
         
         If "real" is specified, the coeffs are letf alone, which might improve the speed of certain
         computations
+        
+        check: if True, will run a type check (and conversions) on the coefficients. If False, will
+        assume they are correct.
         """
         
         self.terms = terms
@@ -312,11 +335,14 @@ class Poly(metaclass=RingElementMeta):
             msg = str.format("Specified ring not supported: '{}'.", ring)
             raise ValueError(msg)
         
-        if ring is None:
-            self.terms.thaw()
-            for term in self.terms:
-                self.terms[term] = Fraction(self.terms[term])
-            self.terms.freez()
+        self.ring = ring
+        
+        if check:
+            if ring is None:
+                self.terms.thaw()
+                for term in self.terms:
+                    self.terms[term] = Fraction(self.terms[term])
+                self.terms.freez()
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -326,7 +352,7 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         other = Poly(other)
-        return Poly(Poly.add_terms(self.terms, other.terms))
+        return Poly(Poly.add_terms(self.terms, other.terms), check = False)
 
     def __rsub__(self, other):
         return self.__sub__(other) * -1
@@ -336,7 +362,7 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         other = Poly(other)
-        return Poly(Poly.sub_terms(self.terms, other.terms))
+        return Poly(Poly.sub_terms(self.terms, other.terms), check = False)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -347,7 +373,7 @@ class Poly(metaclass=RingElementMeta):
         """
         
         nterms = Poly.mul_terms(self.terms, Poly(other).terms)
-        return Poly(nterms)
+        return Poly(nterms, check = False)
     
     def __divmod__(self, other):
         """
@@ -373,7 +399,7 @@ class Poly(metaclass=RingElementMeta):
             if break_now:
                 break
         
-        return (Poly(q_terms), Poly(working_terms))
+        return (Poly(q_terms, check = False), Poly(working_terms, check = False))
     
     def leadReduce(self, other):
         """
@@ -414,19 +440,19 @@ class Poly(metaclass=RingElementMeta):
             raise TypeError(str.format("Can't raise element to {}.\n Must be non-negative integer.",n))
         
         bin_pow = format(n,'b')[::-1]
-        prod = 1 # start with the identity
-        square = prod
+        prod_terms = {Prod((0,)):1} # start with the identity
+        square_terms = {Prod((0,)):1}
         mask = 1
         while mask <= n:
             bit = n & mask
-            if square == 1:
-                square = self
+            if square_terms == {(0,):1}:
+                square_terms = self.terms
             else:
-                square = square * square
+                square_terms = Poly.mul_terms(square_terms, square_terms)
             if bit != 0:
-                prod = prod * square
+                prod_terms = Poly.mul_terms(prod_terms, square_terms)
             mask <<= 1
-        return prod
+        return Poly(prod_terms, check=False)
     
     def __repr__(self):
         return "Poly:[" + self.__str__() + "]"
@@ -477,7 +503,7 @@ class Poly(metaclass=RingElementMeta):
         # we multiply the coeff on the outside in case it is not a number but a Poly
         if pows_left[-1] == 0 and len(pows_left) > 1:
             pows_left = stripTrZs(pows_left)
-        return Poly({Prod(pows_left):1}) * coeff
+        return Poly({Prod(pows_left):1}, check=False) * coeff
 
     def __call__(self, *args):
         res = 0
@@ -494,6 +520,25 @@ class Poly(metaclass=RingElementMeta):
         if self._lead is None:
             self._lead = Prod(sorted(self.terms.keys())[-1])
         return self._lead
+    
+    def scale_int(self):
+        """
+        if the ring is real, don't do anything?
+        return this polynomial scaled so all coeffs are integers
+        """
+        
+        if self.ring == "real":
+            raise ValueError("what are you even doing?")
+       
+        nums = [coeff.numerator for coeff in self.terms.values()]
+        denoms = [coeff.denominator for coeff in self.terms.values()]
+        
+        
+        scale_factor = Fraction(lcm(*denoms), gcd(*nums))
+        if scale_factor == 1:
+            return self
+        return self*scale_factor
+        
 
 ##########################################
 #

@@ -72,6 +72,7 @@ def groebnerBasis(*args):
 
     while True:
         all_done = True
+        polys = [p.scale_int() for p in polys]
         for (p1, p2) in combinations(polys, 2):
             normal_form = normalForm(p1, p2)
             (q,r) = divmodSet(normal_form, polys)
