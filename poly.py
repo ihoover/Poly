@@ -1,6 +1,6 @@
 from functools import reduce
 from fractions import Fraction
-import fractions
+import fractions, numbers
 import math
 
 def gcd_2(m,n):
@@ -211,7 +211,7 @@ class Poly(metaclass=RingElementMeta):
     
     _instances = {}
     _zero_terms = {(0,):0}
-    _rings = ["real", None]
+    _rings = ["real", "frac", None]
     
     @classmethod
     def mul_terms(cls, terms1, terms2):
@@ -268,7 +268,7 @@ class Poly(metaclass=RingElementMeta):
         removeZeros(new_terms)
         return new_terms
     
-    def __new__(cls, *args, check = True, **kwargs):
+    def __new__(cls, *args, **kwargs):
         
         
         if (len(args) < 1):
@@ -286,6 +286,7 @@ class Poly(metaclass=RingElementMeta):
         if (not terms) or (all(terms[key] == 0 for key in terms)):
             terms = Poly._zero_terms
         
+        check = kwargs.get("check", True)
         if check:
             if not(isinstance(terms, frozendict)):
                 for key in list(terms.keys()):
@@ -296,13 +297,16 @@ class Poly(metaclass=RingElementMeta):
                         value = terms.pop(key)
                         terms[new_key] = value
         
+        
+        ring = kwargs.get("ring", None)
         fterms = frozendict(terms)
-        if fterms in Poly._instances:
-            return Poly._instances[fterms]
+        if (fterms, ring) in Poly._instances:
+            return Poly._instances[(fterms, ring)]
         
         new = super().__new__(cls)
         new.__init__(fterms, **kwargs)
-        Poly._instances[fterms] = new
+        
+        Poly._instances[(fterms, ring)] = new
         return new
     
     def __init__(self, terms, ring=None, check=True):
@@ -340,8 +344,18 @@ class Poly(metaclass=RingElementMeta):
         if check:
             if ring is None:
                 self.terms.thaw()
+                if all(isinstance(coeff, numbers.Rational) for coeff in self.terms.values()):
+                    for term in self.terms:
+                        self.terms[term] = Fraction(self.terms[term])
+                else:
+                    for term in self.terms:
+                        self.terms[term] = float(self.terms[term])
+                self.terms.freez()
+            
+            if ring is "real":
+                self.terms.thaw()
                 for term in self.terms:
-                    self.terms[term] = Fraction(self.terms[term])
+                    self.terms[term] = float(self.terms[term])
                 self.terms.freez()
 
     def __radd__(self, other):
@@ -351,8 +365,12 @@ class Poly(metaclass=RingElementMeta):
         """
         produce new polynomial
         """
+        
         other = Poly(other)
-        return Poly(Poly.add_terms(self.terms, other.terms), check = False)
+        if not all([self.ring, other.ring]):
+            new_ring = self.ring if self.ring else other.ring
+
+        return Poly(Poly.add_terms(self.terms, other.terms), ring = new_ring, check = False)
 
     def __rsub__(self, other):
         return self.__sub__(other) * -1
@@ -362,7 +380,9 @@ class Poly(metaclass=RingElementMeta):
         produce new polynomial
         """
         other = Poly(other)
-        return Poly(Poly.sub_terms(self.terms, other.terms), check = False)
+        if not all([self.ring, other.ring]):
+            new_ring = self.ring if self.ring else other.ring
+        return Poly(Poly.sub_terms(self.terms, other.terms), ring=new_ring, check = False)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -371,9 +391,16 @@ class Poly(metaclass=RingElementMeta):
         """
         produce new polynomial
         """
+        other = Poly(other)
+        if not all([self.ring, other.ring]):
+            new_ring = self.ring if self.ring else other.ring
         
-        nterms = Poly.mul_terms(self.terms, Poly(other).terms)
-        return Poly(nterms, check = False)
+        else:
+            # maybe add coersion?
+            msg = str.format("Can't multiply polys in rings {} and {}.", self.ring, other.ring)
+            raise ValueError(msg)
+        
+        return Poly(Poly.mul_terms(self.terms, other.terms), ring = new_ring, check = False)
     
     def __divmod__(self, other):
         """

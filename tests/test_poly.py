@@ -245,3 +245,65 @@ class testPoly(unittest.TestCase):
         p_scaled = 3*x**3 + 2*x + 9
         
         self.assertEqual(p.scale_int(), p_scaled)
+    
+    def test_ring_notRecognized(self):
+        ring = "smurf"
+        
+        with self.assertRaises(ValueError):
+            p = Poly(ring=ring)
+        
+    def test_ring_None(self):
+        p = Poly()
+        self.assertEqual(p.ring, None)
+    
+    def test_ring_real(self):
+        
+        p = Poly(ring="real")
+        self.assertEqual(p.ring, "real")
+    
+    def test_ring_values_none_ints(self):
+        
+        p = Poly({(1,):2})
+        self.assertIsInstance(p.terms[(1,)], Fraction)
+    
+    def test_ring_values_none_floats(self):
+        
+        p = Poly({(1,):2.1}, ring=None)
+        self.assertIsInstance(p.terms[(1,)], float)
+    
+    def test_ring_values_real_ints(self):
+        
+        p = Poly({(1,):2.1}, ring="real")
+        self.assertIsInstance(p.terms[(1,)], float)
+        self.assertNotIsInstance(p.terms[(1,)], Fraction)
+    
+    def test_ring_multiply(self):
+    
+        p1 = Poly({(1,):2})
+        p2 = Poly({(1,):2}, ring="real")
+        
+        p3 = p1*p2
+        self.assertEqual(p3.ring, "real")
+        for value in p3.terms.values():
+            self.assertIsInstance(value, float)
+    
+    def test_ring_sub(self):
+    
+        p1 = Poly({(1,):2})
+        p2 = Poly({(1,):2}, ring="real")
+        
+        p3 = p1-p2
+        self.assertEqual(p3.ring, "real")
+        for value in p3.terms.values():
+            self.assertIsInstance(value, float)
+
+    
+    def test_ring_add(self):
+    
+        p1 = Poly({(1,):2})
+        p2 = Poly({(1,):2}, ring="real")
+        
+        p3 = p1+p2
+        self.assertEqual(p3.ring, "real")
+        for value in p3.terms.values():
+            self.assertIsInstance(value, float)
