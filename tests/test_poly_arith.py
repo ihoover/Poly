@@ -186,3 +186,21 @@ class TestPolyArithmetic(unittest.TestCase):
         
         self.assertEqual(abs(self.one), 1)
         self.assertEqual(abs(-self.one), 1)
+
+
+class TestDivmodGrvlex(unittest.TestCase):
+    
+    def setUp(self):
+        # y^2 + xz
+        self.p1 = Poly({(1,0,1):1, (0,2):1})
+        
+        # y^3
+        self.p2 = Poly({(0,3):1})
+        
+        self.q = Poly({(0,1):1})
+        self.r = Poly({(1,1,1):-1})
+    
+    def test_Divmod(self):
+        
+        q,r = divmod(self.p2, self.p1)
+        self.assertEqual((q,r), (self.q,self.r))

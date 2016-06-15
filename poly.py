@@ -10,7 +10,7 @@ def gcd_2(m,n):
     return(abs(gcd(n,r)))
 
 def gcd(*args):
-    return reduce(fractions.gcd, args)
+    return reduce(math.gcd, args)
 
 def lcm_2(m,n):
     """
@@ -85,6 +85,20 @@ def stripTrZs(tup):
     if tr_zs == len(tup):
         return zero_tup 
     return tup[0:-tr_zs]
+
+def padZrs(tup, pad_length):
+    """
+    increase length to 'pad_length' with zeroes
+    """
+    
+    if pad_length < len(tup):
+        raise ValueError("can't reduce length with padding")
+    
+    extra_zrs = pad_length - len(tup)
+    if extra_zrs == 0:
+        return tup
+    
+    return tuple(list(tup)+([0]*extra_zrs))
 
 class frozendict(dict):
     """
@@ -269,8 +283,6 @@ class Poly(metaclass=RingElementMeta):
         return new_terms
     
     def __new__(cls, *args, **kwargs):
-        
-        
         if (len(args) < 1):
             terms = Poly._zero_terms
         else:
@@ -327,6 +339,7 @@ class Poly(metaclass=RingElementMeta):
         
         self.terms = terms
         self._lead = None
+        self._sorted_terms = None
         self.nVars = max(len(tup) for tup in terms.keys())
         self.isConstant = False 
         self.value = None
@@ -499,7 +512,7 @@ class Poly(metaclass=RingElementMeta):
             
             return res
         
-        return " + ".join([str(self.terms[key])+" "+ _strKey(key) for key in sorted(list(self.terms.keys()))])
+        return " + ".join([str(self.terms[key])+" "+ _strKey(key) for key in self.sorted_terms])
     
     def __abs__(self):
         if self.isConstant:
@@ -545,8 +558,22 @@ class Poly(metaclass=RingElementMeta):
         return leading term
         """
         if self._lead is None:
-            self._lead = Prod(sorted(self.terms.keys())[-1])
+            self._lead = self.sorted_terms[0]
         return self._lead
+    
+    @property
+    def sorted_terms(self):
+        """
+        list of terms in grvlex ordering
+        """
+        if self._sorted_terms is None:
+            pad_length = max(len(x) for x in self.terms.keys())
+            def key_func(key_tuple):
+                return (sum(key_tuple), tuple(-x for x in padZrs(key_tuple, pad_length)[::-1]))
+        
+        
+            self._sorted_terms = sorted(self.terms.keys(), key=key_func, reverse=True)
+        return self._sorted_terms
     
     def scale_int(self):
         """
@@ -555,7 +582,7 @@ class Poly(metaclass=RingElementMeta):
         """
         
         if self.ring == "real":
-            raise ValueError("what are you even doing?")
+            raise ValueError("what are you even doing? Trying to scale real values to integers...")
        
         nums = [coeff.numerator for coeff in self.terms.values()]
         denoms = [coeff.denominator for coeff in self.terms.values()]

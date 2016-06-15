@@ -3,20 +3,33 @@ from itertools import combinations
 
 def divmodSet(numerator, basis, leadReduce=False):
     """
-    Apply euclidean division to divide `p` by the polynomials in `basis`
+    Apply euclidean division to divide `p` by the polynomials in `basis` until the numerator is
+    no longer reducible by any of the polynomials in `basis`
     Returns (quotient, remainder):
         quotient: the factor for each polynomial in `basis`, in the order of `basis`
         remainder: the remainder
     """
+    
+    if len(basis) == 1:
+        (q, r) = divmod(numerator, basis[0])
+        return ([q], r)
+    
     q_list = [0]*len(basis)
-    for i in range(len(basis)):
-        if leadReduce:
-            (q,numerator) = numerator.leadReduce(basis[i])
-        else:
-            (q,numerator) = divmod(numerator, basis[i])
-        q_list[i] = q
-        if numerator == 0:
-            break
+    
+    not_done = True
+    while not_done:
+        not_done = False
+        for i in range(len(basis)):
+            if leadReduce:
+                (q,numerator) = numerator.leadReduce(basis[i])
+            else:
+                (q,numerator) = divmod(numerator, basis[i])
+            if q != 0:
+                q_list[i] += q
+                not_done = True # loop until numerator is not reducible by any of the basis
+                
+            if numerator == 0:
+                break
     
     # list of quotients, and the remainder
     return (q_list, numerator)
@@ -69,9 +82,11 @@ def groebnerBasis(*args):
     polys = reduceList(polys)
     new_polys = []
     i_old = 0 # reduces redundant pair checks
-
+    
+    # import pdb; pdb.set_trace()
     while True:
         all_done = True
+        # import pdb; pdb.set_trace()
         polys = [p.scale_int() for p in polys]
         for (p1, p2) in combinations(polys, 2):
             normal_form = normalForm(p1, p2)

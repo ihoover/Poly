@@ -199,7 +199,27 @@ class test_Prod(unittest.TestCase):
         self.assertEqual(Prod.lcm(p1,p2), lcm)
 
 
-class testPoly(unittest.TestCase):
+class testPadZrs(unittest.TestCase):
+
+    def test_extend(self):
+        t = (1,2)
+        pad_length = 4
+        padded = (1,2,0,0)
+        self.assertEqual(padZrs(t, pad_length), padded)
+    
+    def test_nochng(self):
+        t = (1,2)
+        pad_length = 2
+        self.assertEqual(padZrs(t, pad_length), t)
+
+    def test_shorter(self):
+        t = (1,2,3)
+        pad_length = 2
+        with self.assertRaises(ValueError):
+            padZrs(t,pad_length)
+
+
+class testPolyCreate(unittest.TestCase):
 
     def test_empty(self):
         p = Poly()
@@ -307,3 +327,21 @@ class testPoly(unittest.TestCase):
         self.assertEqual(p3.ring, "real")
         for value in p3.terms.values():
             self.assertIsInstance(value, float)
+
+
+class testPolyOrdering(unittest.TestCase):
+    """
+    test that grvlex ordering is implemented properly
+    """
+    
+    def setUp(self):
+        terms = {(0,1,1):1, (1,0,1):1, (1,1):1, (2,):1, (0,2):1, (0,0,2):1}
+        self.p = Poly(terms)
+    
+    def test_grvlex(self):
+        sorted_terms = [(2,), (1,1), (0,2), (1,0,1), (0,1,1), (0,0,2)]
+        self.assertEqual(self.p.sorted_terms, sorted_terms)
+    
+    def test_lead(self):
+        p = Poly({(1,0,1): 1, (0,2):1})
+        self.assertEqual(p.lead, p.sorted_terms[0])

@@ -1,6 +1,7 @@
 import os; import sys
 sys.path.insert(0, os.path.abspath(os.pardir))
 import unittest
+from unittest.mock import patch
 from itertools import product, combinations
 from poly_algebra import *
 
@@ -46,6 +47,36 @@ class TestDivmodSet(unittest.TestCase):
         self.assertEqual(sum([q[i]*basis[i] for i in range(len(basis))]) + r, p1)
 
 
+def mock_divmod(self, other):
+    if self == 1:
+        return (0,self)
+
+    return (1, self - 1)
+
+
+class TestDivModSetFullyReduced(unittest.TestCase):
+
+    def setUp(self):
+        self.ten = Poly({(0,):10})
+        self.x = Poly({(1,):1})
+        self.y = Poly({(0,1):1})
+        self.z = Poly({(0,0,1):1})
+    
+    @patch('poly.Poly.__divmod__', new=mock_divmod)
+    def test_reduced_once_with_one(self):
+        """
+        For efficiency sake, just do one reduction if basis only has one element.
+        """
+        (q_list, r) = divmodSet(self.ten, [self.x])
+        self.assertEqual(self.ten - 1, r)
+    
+    @patch('poly.Poly.__divmod__', new=mock_divmod)
+    def test_fully_reduced_with_two(self):
+        (q_list, r) = divmodSet(self.ten, [self.x, self.y])
+        self.assertEqual(1, r)
+        self.assertEqual(q_list, [5,4])
+
+
 class TestNormalForm(unittest.TestCase):
     
     def setUp(self):
@@ -70,7 +101,6 @@ def mock_divmodSet(denom, basis, **kwargs):
     return (None, -denom)
 
 
-from unittest.mock import patch
 class testReduceList(unittest.TestCase):
     
     @patch('poly_algebra.divmodSet', return_value=(None, -1))
