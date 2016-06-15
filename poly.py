@@ -594,6 +594,13 @@ class Poly(metaclass=RingElementMeta):
         return self*scale_factor
         
 
+def indets(num, ring = None):
+    """
+    Returns the Poly objects representing the first `num` indeterminates.
+    """
+    return tuple(Poly({tuple([0]*i + [1]): 1}, ring=ring) for i in range(num))
+    
+
 ##########################################
 #
 #   now import extras so "import poly" imports the whole package

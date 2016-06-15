@@ -345,3 +345,22 @@ class testPolyOrdering(unittest.TestCase):
     def test_lead(self):
         p = Poly({(1,0,1): 1, (0,2):1})
         self.assertEqual(p.lead, p.sorted_terms[0])
+
+class testBasisGeneration(unittest.TestCase):
+
+    def setUp(self):
+        self.x = Poly({(1,):1})
+        self.y = Poly({(0,1):1})
+        self.z = Poly({(0,0,1):1})
+        self.w = Poly({(0,0,0,1):1})
+        
+        self.xr = Poly({(1,):1}, ring="real")
+        self.yr = Poly({(0,1):1}, ring="real")
+        self.zr = Poly({(0,0,1):1}, ring="real")
+        self.wr = Poly({(0,0,0,1):1}, ring="real")
+    
+    def test_four(self):
+        self.assertEqual(indets(4), (self.x, self.y, self.z, self.w))
+    
+    def test_four_real(self):
+        self.assertEqual(indets(4, ring="real"), (self.xr, self.yr, self.zr, self.wr))
