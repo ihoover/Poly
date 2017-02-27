@@ -1,6 +1,4 @@
-import os; import sys
-sys.path.insert(0, os.path.abspath(os.pardir))
-import unittest
+from common import *
 from itertools import product, combinations
 from poly_algebra import *
 
@@ -10,6 +8,8 @@ class TestPolyArithmetic(unittest.TestCase):
         """
         define some useful poynomials
         """
+        #clear the cache
+        Poly._instances.clear()
         
         self.x = Poly({(1,):1})
         self.y = Poly({(0,1):1})
@@ -74,6 +74,13 @@ class TestPolyArithmetic(unittest.TestCase):
         self.assertEqual(5 * self.p1, self.p1_times_five)
         self.assertEqual(self.p1 * self.five, self.p1_times_five)
     
+    def test_sub_self(self):
+        # import pdb; pdb.set_trace()
+        p1 = Poly({(1,):1})
+        p2 = p1 - p1
+        isWellFormed(p2)
+        self.assertEqual(p2,0)
+    
     def test_pow_0(self):
         self.assertEqual(self.p1**0, 1)
     
@@ -106,6 +113,7 @@ class TestPolyArithmetic(unittest.TestCase):
         result = {(3,1):1, (2,2):1}
         
         self.assertEqual(result, (p1*p2).terms)
+        isWellFormed(p1*p2)
 
     def test_div_single_remainder(self):
         # x^2 + 1
@@ -119,6 +127,9 @@ class TestPolyArithmetic(unittest.TestCase):
         r = Poly({(0,):1})
         
         self.assertEqual(divmod(p1,p2), (q,r))
+        for element in divmod(p1,p2):
+            isWellFormed(element)
+
         
     def test_div_single_remainderII(self):
         # x^3 + x
@@ -132,6 +143,8 @@ class TestPolyArithmetic(unittest.TestCase):
         r = Poly({(0,):-2})
         
         self.assertEqual(divmod(p1,p2), (q,r))
+        for element in divmod(p1,p2):
+            isWellFormed(element)
     
     def test_div_single_0r(self):
         
@@ -157,7 +170,17 @@ class TestPolyArithmetic(unittest.TestCase):
         r = Poly({(0,2):1, (0,):1})
         
         self.assertEqual(divmod(p1,p2), (q,r))
+        for element in divmod(p1,p2):
+            isWellFormed(element)
     
+    def test_divmod_self(self):
+        Poly._instances.clear()
+        x,y = indets(2)
+        p1 = x**2+y
+        for element in divmod(p1,p1):
+            isWellFormed(element)
+        self.assertEqual((1,0),divmod(p1,p1))
+
     def test_notJustLeadReduction(self):
         x = self.x
         y = self.y

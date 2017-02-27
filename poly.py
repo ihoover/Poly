@@ -132,11 +132,66 @@ class frozendict(dict):
         else:
             super().__setitem__(key, new_value)
     
+    def setdefault(self, *args, **kwargs):
+        if self._frozen:
+            raise TypeError("'frozendict' object doesn't support item assignment")
+        else:
+            super().setdefault(*args, **kwargs)
+    
+    def update(self, *args, **kwargs):
+        if self._frozen:
+            raise TypeError("'frozendict' object doesn't support item assignment")
+        else:
+            super().setdefault(*args, **kwargs)
+    
+    def pop(self, *args, **kwargs):
+        if self._frozen:
+            raise TypeError("'frozendict' object doesn't support item assignment")
+        else:
+            super().setdefault(*args, **kwargs)
+    
+    def clear(self, *args, **kwargs):
+        if self._frozen:
+            raise TypeError("'frozendict' object doesn't support item assignment")
+        else:
+            super().setdefault(*args, **kwargs)
+
     def freez(self):
         self._frozen = True
     
     def thaw(self):
+        # import pdb; pdb.set_trace()
         self._frozen = False
+
+###################
+# Monomial orders
+###################
+
+def grvlex(key_tuple, nvars):
+    return (-sum(key_tuple), padZrs(key_tuple, nvars)[::-1])
+
+def elim0(key_tuple, nvars):
+    """
+    Treat the first var as a block, then resolve ties with grvlex
+    """
+    return (-key_tuple[0], grvlex(key_tuple[1:], nvars-1))
+
+def elim1(key_tuple, nvars):
+    """
+    Treat the first two vars as a block, then resolve ties with grvlex
+    """
+
+    #pad at minimum to length 2
+    if nvars < 2:
+        nvars = 2
+
+    tup = padZrs(key_tuple, nvars)
+    return (grvlex(tup[:2], 2), grvlex(key_tuple[2:], nvars-2))
+
+# Default ordering
+Order = grvlex
+
+###################
 
 
 class Prod(tuple):
@@ -224,7 +279,7 @@ class Poly(metaclass=RingElementMeta):
     """
     
     _instances = {}
-    _zero_terms = {(0,):0}
+    _zero_terms = frozendict({Prod((0,)):0})
     _rings = ["real", "frac", None]
     
     @classmethod
@@ -284,7 +339,7 @@ class Poly(metaclass=RingElementMeta):
     
     def __new__(cls, *args, **kwargs):
         if (len(args) < 1):
-            terms = Poly._zero_terms
+            terms = dict(Poly._zero_terms)
         else:
             terms = args[0]
         
@@ -296,18 +351,17 @@ class Poly(metaclass=RingElementMeta):
             terms = {(0,):terms}
         
         if (not terms) or (all(terms[key] == 0 for key in terms)):
-            terms = Poly._zero_terms
-        
+            terms = dict(Poly._zero_terms)
+
         check = kwargs.get("check", True)
         if check:
-            if not(isinstance(terms, frozendict)):
-                for key in list(terms.keys()):
-                    if isinstance(key, Prod):
-                        continue
-                    else:
-                        new_key = Prod(key)
-                        value = terms.pop(key)
-                        terms[new_key] = value
+            for key in terms.keys():
+                if isinstance(key, Prod):
+                    continue
+                else:
+                    new_key = Prod(key)
+                    value = terms.pop(key)
+                    terms[new_key] = value
         
         
         ring = kwargs.get("ring", None)
@@ -336,12 +390,13 @@ class Poly(metaclass=RingElementMeta):
         check: if True, will run a type check (and conversions) on the coefficients. If False, will
         assume they are correct.
         """
-        
+        # import pdb; pdb.set_trace()
         self.terms = terms
         self._lead = None
         self._sorted_terms = None
+        self._order = None
         self.nVars = max(len(tup) for tup in terms.keys())
-        self.isConstant = False 
+        self.isConstant = False
         self.value = None
 
         if len(self.terms) == 1 and (0,) in self.terms:
@@ -557,22 +612,19 @@ class Poly(metaclass=RingElementMeta):
         """
         return leading term
         """
-        if self._lead is None:
+        if (self._lead is None) or (self._order != Order):
             self._lead = self.sorted_terms[0]
         return self._lead
     
     @property
     def sorted_terms(self):
         """
-        list of terms in grvlex ordering
+        list of terms in Order ordering
         """
-        if self._sorted_terms is None:
-            pad_length = max(len(x) for x in self.terms.keys())
-            def key_func(key_tuple):
-                return (sum(key_tuple), tuple(-x for x in padZrs(key_tuple, pad_length)[::-1]))
-        
-        
-            self._sorted_terms = sorted(self.terms.keys(), key=key_func, reverse=True)
+
+        if (self._sorted_terms is None) or (self._order != Order):
+            self._order = Order
+            self._sorted_terms = sorted(self.terms.keys(), key=lambda x: Order(x,self.nVars))
         return self._sorted_terms
     
     def scale_int(self):

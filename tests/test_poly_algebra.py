@@ -1,6 +1,4 @@
-import os; import sys
-sys.path.insert(0, os.path.abspath(os.pardir))
-import unittest
+from common import *
 from unittest.mock import patch
 from itertools import product, combinations
 from poly_algebra import *
@@ -32,6 +30,13 @@ class TestDivmodSet(unittest.TestCase):
     def test_0rem_multivar(self):
         p1 = self.x + self.z**3*self.y + self.y**3
         basis = [self.x, self.y, self.z]
+        (q,r) = divmodSet(p1, basis)
+        self.assertEqual(r, 0)
+        self.assertEqual(sum([q[i]*basis[i] for i in range(len(basis))]), p1)
+    
+    def test_0rem_multivar_self(self):
+        p1 = self.x + self.z**3*self.y + self.y**3
+        basis = [self.x**5, self.y**14, p1]
         (q,r) = divmodSet(p1, basis)
         self.assertEqual(r, 0)
         self.assertEqual(sum([q[i]*basis[i] for i in range(len(basis))]), p1)
@@ -72,6 +77,7 @@ class TestDivModSetFullyReduced(unittest.TestCase):
     
     @patch('poly.Poly.__divmod__', new=mock_divmod)
     def test_fully_reduced_with_two(self):
+        
         (q_list, r) = divmodSet(self.ten, [self.x, self.y])
         self.assertEqual(1, r)
         self.assertEqual(q_list, [5,4])
